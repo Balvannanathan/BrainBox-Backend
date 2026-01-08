@@ -31,14 +31,15 @@ def get_session(session_id: int) -> Optional[ChatSession]:
         db.close()
 
 
-def get_all_sessions(user_id: Optional[str] = None) -> List[ChatSession]:
+def get_all_histories(user_id: Optional[str] = None) -> List[ChatSession]:
     """Get all chat sessions, optionally filtered by user_id"""
     db = next(get_db())
     try:
         query = db.query(ChatSession)
         if user_id:
             query = query.filter(ChatSession.user_id == user_id)
-        return query.order_by(ChatSession.created_at.desc()).all()
+        result = query.order_by(ChatSession.updated_at.desc()).all()
+        return result
     finally:
         db.close()
 

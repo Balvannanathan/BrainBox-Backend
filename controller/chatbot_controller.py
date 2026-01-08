@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from typing import Optional
-from service.chatbot_service import process_chat_message, get_session_history
+from service.chatbot_service import process_chat_message, get_chat_history, get_all_sessions
 
 
 # Request/Response models
@@ -19,6 +19,9 @@ class ChatRequest(BaseModel):
                 "user_id": "user123"
             }
         }
+    
+class GetSessionsRequest(BaseModel):
+    user_id: str
 
 
 class ChatResponse(BaseModel):
@@ -43,6 +46,12 @@ class ChatResponse(BaseModel):
             }
         }
 
+class AllChatsResponse(BaseModel):
+    """Response model for all chats"""
+    session_id: int
+    session_name: str
+    created_at: str
+    updated_at: str
 
 class SessionHistoryResponse(BaseModel):
     """Response model for session history"""
@@ -54,7 +63,6 @@ class SessionHistoryResponse(BaseModel):
 
 # Create router
 router = APIRouter(prefix="/api", tags=["Chatbot"])
-
 
 @router.post("/chat", response_model=ChatResponse, status_code=200)
 async def chat(request: ChatRequest):
@@ -88,7 +96,7 @@ async def chat(request: ChatRequest):
         )
 
 
-@router.get("/session/{session_id}/history", response_model=SessionHistoryResponse)
+@router.get("/session/{session_id}", response_model=SessionHistoryResponse)
 async def get_session_history(session_id: int):
     """
     Get complete conversation history for a session
@@ -98,9 +106,29 @@ async def get_session_history(session_id: int):
     Returns session information and all messages
     """
     try:
-        history = get_session_history(session_id)
-        return SessionHistoryResponse(**history)
+        history = await get_chat_history(session_id)
+        print(history)
+        return history
     
+    except ValueError as e:
+        raise HTTPException(
+            status_code=404,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"An error occurred: {str(e)}"
+        )
+
+@router.post("/sessions", response_model=list[dict])
+async def get_all_chats(request: GetSessionsRequest):
+    try:
+        print(request.user_id)
+        result = await get_all_sessions(user_id=request.user_id)
+        print(result)
+        return result
+
     except ValueError as e:
         raise HTTPException(
             status_code=404,

@@ -1,5 +1,5 @@
 from typing import Optional, Dict, Any
-from repository.chat_repository import create_session, get_session, get_all_sessions, update_session, delete_session, create_message, get_recent_messages, get_messages_by_session
+from repository.chat_repository import create_session, get_session, get_all_histories, update_session, delete_session, create_message, get_recent_messages, get_messages_by_session
 import repository.error_log_repository as error_repo
 from utilities.ai_client import generate_chat_response
 
@@ -77,12 +77,24 @@ def get_conversation_history(session_id: int, limit: int = 10) -> list:
     """
     messages = get_recent_messages(session_id, count=limit)
     return [
-        {"role": msg.role, "content": msg.content}
+        [{"role": "user", "content": msg.question}, {"role": "assistant", "content": msg.answer}]
         for msg in messages
     ]
 
 
-def get_session_history(session_id: int) -> Dict[str, Any]:
+async def get_all_sessions(user_id: str) -> list:
+    chats = get_all_histories(user_id=user_id)
+    return [
+        {
+            "session_id": chat.id,
+            "session_name": chat.session_name,
+            "created_at": chat.created_at.isoformat(),
+            "updated_at": chat.updated_at.isoformat()
+        }
+        for chat in chats
+    ]
+
+async def get_chat_history(session_id: int) -> Dict[str, Any]:
     """
     Get complete session history with all messages
     
@@ -102,11 +114,12 @@ def get_session_history(session_id: int) -> Dict[str, Any]:
         "session_id": session.id,
         "session_name": session.session_name,
         "created_at": session.created_at.isoformat(),
+        "updated_at": session.updated_at.isoformat(),
         "messages": [
             {
-                "id": msg.id,
-                "role": msg.role,
-                "content": msg.content,
+                "message_id": msg.id,
+                "question": msg.question,
+                "answer": msg.answer,
                 "timestamp": msg.timestamp.isoformat()
             }
             for msg in messages
